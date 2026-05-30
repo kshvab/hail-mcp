@@ -91,6 +91,25 @@ The server **refuses to start** if `X_API_KEY` is unset or left as the placehold
 
 > **Issue the key only to peers you trust.** Anyone with the key can connect, send to any name, and (v1) register under any name — impersonation is invisible to a casual user. See [SECURITY.md](./SECURITY.md).
 
+### Docker
+
+The server is stateless (everything in RAM, no database, no volumes), so it containerizes cleanly. With [docker compose](./docker-compose.yml):
+
+```bash
+echo "X_API_KEY=$(openssl rand -hex 32)" > .env   # a strong shared key
+docker compose up -d --build
+```
+
+Or plain Docker:
+
+```bash
+docker build -t hail-mcp .
+docker run -d --name hail -p 9091:9091 -e X_API_KEY=<a long random string> \
+  --restart unless-stopped hail-mcp
+```
+
+The image is a non-root Alpine build (~260 MB) with a built-in healthcheck. `X_API_KEY` is passed at run time, never baked in. `restart: unless-stopped` survives crashes and host reboots — a restart drops presence, and peers just reconnect and re-register. Put TLS (a reverse proxy) in front before exposing it beyond localhost; see [SECURITY.md](./SECURITY.md).
+
 ## Connecting a peer (a Claude Code session)
 
 On each machine that should join, register hail as an HTTP MCP server and launch Claude Code attached to it as a channel:

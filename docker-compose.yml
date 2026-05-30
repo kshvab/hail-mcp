@@ -1,0 +1,32 @@
+# hail-mcp — VM-friendly deployment.
+#
+#   echo "X_API_KEY=$(openssl rand -hex 32)" > .env   # a strong shared key
+#   docker compose up -d --build
+#
+# State is in RAM (no volumes, no database). `restart: unless-stopped` brings it
+# back after a crash or host reboot; a restart drops presence, and peers simply
+# reconnect and re-register.
+services:
+  hail:
+    build: .
+    image: hail-mcp:latest
+    container_name: hail-mcp
+    restart: unless-stopped
+    # Host port (left) -> container port 9091 (right). Override the host side
+    # with HAIL_PORT in .env if 9091 is taken.
+    ports:
+      - "${HAIL_PORT:-9091}:9091"
+    environment:
+      # Required — compose refuses to start without it, mirroring the server.
+      X_API_KEY: ${X_API_KEY:?set X_API_KEY in .env or the environment}
+      # DEBUG: "1"   # uncomment for a verbose per-request wire/push trace
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get({host:'127.0.0.1',port:9091,path:'/mcp'},r=>process.exit(0)).on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
