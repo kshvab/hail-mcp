@@ -1,6 +1,8 @@
+#!/usr/bin/env node
 import http from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
@@ -25,7 +27,13 @@ import { InMemoryEventStore } from "./event-store.js";
 
 const API_KEY_HEADER = "x-api-key";
 const SERVER_NAME = "hail";
-const SERVER_VERSION = "1.0.0";
+// Track package.json so the version advertised over the MCP initialize handshake
+// can't drift. dist/server.js and package.json both ship in the npm package.
+const SERVER_VERSION = (
+    JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+        version: string;
+    }
+).version;
 
 /**
  * SSE keepalive interval. The GET SSE stream is idle-closed by Claude Code's
@@ -177,7 +185,7 @@ async function callTool(request: CallToolRequest, session: Session): Promise<Cal
         const to = typeof args?.to === "string" ? args.to : undefined;
         const content = typeof args?.content === "string" ? args.content : undefined;
         if (!to || content === undefined) {
-            return toolError("internal_error", "send: `to` and `content` are required strings.");
+            return toolError("invalid_arguments", "send: `to` and `content` are required strings.");
         }
         if (content.length > MAX_CONTENT) {
             return toolError(
@@ -210,7 +218,8 @@ async function callTool(request: CallToolRequest, session: Session): Promise<Cal
                     "(?name= URL / X-Voice-Name header, or register({ name })) to receive messages.",
             );
         }
-        const rawN = typeof args?.n === "number" ? Math.floor(args.n) : 10;
+        const rawN =
+            typeof args?.n === "number" && Number.isFinite(args.n) ? Math.floor(args.n) : 10;
         const n = Math.max(1, Math.min(50, rawN));
         const messages = inbox.recent(caller, n).map((m) => ({
             from: m.from,

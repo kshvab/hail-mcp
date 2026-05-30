@@ -55,13 +55,21 @@ Each peer launches Claude Code with hail configured as a channel; a connection t
 | `register({ name? })` | A connection that arrives **with** a name is already online — no call needed. A connection **without** a name (e.g. a cold instance with no env var set) calls `register({ name: "alice" })` to come online; the session adopts that name. (Also serves as an explicit re-claim / takeover.) |
 | `who_is_online()` | List the names currently reachable. Use one as the `to` of `send`. |
 | `send({ to, content })` | Wake peer `to` with your message, tagged `[from <you>]`. Returns `{ ok, delivered, queued }` — `delivered` = a live wake landed; `queued` = the peer wasn't reachable so the message went to their inbox to pull. (Exactly one is true.) To reply, the recipient just `send`s back. |
-| `get_recent({ n? })` | Pull the most recent messages sent **to you** (newest last, each with sender + time). The path for a session that can't be woken by a push: others `send` to your name while you're away, you poll here. A wakeable session gets sends live and rarely needs it. |
+| `get_recent({ n? })` | Pull the most recent messages sent **to you** (newest last, each with sender + time). `n` defaults to 10, clamped to 50. The path for a session that can't be woken by a push: others `send` to your name while you're away, you poll here. A wakeable session gets sends live and rarely needs it. |
 
 Two ways to receive: a **live push** if you're wakeable, or **pull `get_recent`** if you're not. You come online by connecting with a name (below); there is no required handshake.
 
 ## Quickstart (the server)
 
 Requirements: Node.js >= 20.
+
+Run it without cloning:
+
+```bash
+X_API_KEY="a long random string" PORT=9091 npx hail-mcp
+```
+
+Or from a clone (for development):
 
 ```bash
 git clone https://github.com/kshvab/hail-mcp.git hail
@@ -81,6 +89,8 @@ X_API_KEY=<a long random string>
 
 The server **refuses to start** if `X_API_KEY` is unset or left as the placeholder `changeme` — an open server is an open prompt-injection channel (see [SECURITY.md](./SECURITY.md)). On start it logs `MCP server … on http://localhost:9091/mcp`. Set `DEBUG=1` for a verbose per-request wire trace.
 
+> **Issue the key only to peers you trust.** Anyone with the key can connect, send to any name, and (v1) register under any name — impersonation is invisible to a casual user. See [SECURITY.md](./SECURITY.md).
+
 ## Connecting a peer (a Claude Code session)
 
 On each machine that should join, register hail as an HTTP MCP server and launch Claude Code attached to it as a channel:
@@ -92,7 +102,9 @@ claude mcp add --transport http hail "http://YOUR_HOST:9091/mcp?name=\${HAIL_NAM
   --header "X-Api-Key: <the X_API_KEY you set>"
 
 # 2. Set your name for THIS launch, then start Claude Code attached to the channel.
-export HAIL_NAME=alice          # any name; temp instances use a random one
+export HAIL_NAME=alice          # any unique name YOU choose for this launch
+                                # (the server never generates names; a nameless
+                                #  connection stays nameless until it register()s)
 claude --dangerously-load-development-channels server:hail
 # A named connection is online automatically — no register() call needed.
 ```
@@ -134,6 +146,19 @@ These are the non-obvious things that make a server-pushed `notifications/claude
 - **Best-effort delivery** — `delivered:true` means the wake was handed to a live session stream without error; there is no client read-receipt in this transport. (The inbox + `get_recent` is the durable-within-a-run fallback.)
 - **Self-hosted channel requires the dev flag** (above).
 - **No TLS by default** — put a TLS-terminating proxy in front of any non-loopback deployment.
+
+## Development
+
+```bash
+npm install
+npm run dev          # watch-run src/server.ts (needs X_API_KEY set)
+npm run typecheck    # strict tsc --noEmit
+npm test             # jest, ESM
+npm run lint         # eslint + prettier
+npm run build        # clean + tsc -> dist/
+```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for conventions. Anything touching the auth gate, the push/keepalive path, or the notification `meta` is wake-sensitive — keep the suite green and verify against a real Claude Code session.
 
 ## Roadmap
 
