@@ -43,6 +43,11 @@ const SERVER_VERSION = (
  */
 const KEEPALIVE_MS = 15_000;
 
+/** Cap on concurrent live MCP sessions — bounds the sessions map (and the
+ * per-session event buffers) against a key-holder opening streams without
+ * limit. */
+const MAX_SESSIONS = 2000;
+
 const INSTRUCTIONS =
     "hail — a SYMMETRIC peer-messaging bridge for Claude Code voices. " +
     "Every participant is a connected, wakeable peer. " +
@@ -134,6 +139,13 @@ async function handlePost(req: IncomingMessage, res: ServerResponse, body: unkno
     }
     if (!isInitializeRequest(body)) {
         return badRequest(res, "no mcp-session-id and not an initialize request");
+    }
+    if (sessions.size >= MAX_SESSIONS) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(
+            JSON.stringify({ error: { code: "server_busy", message: "session capacity reached" } }),
+        );
+        return;
     }
     await createSession(req, res, body);
 }

@@ -18,6 +18,13 @@ export class InMemoryEventStore implements EventStore {
     private readonly events: { eventId: EventId; streamId: StreamId; message: JSONRPCMessage }[] =
         [];
 
+    /** Bound the replay buffer (newest in, oldest out). Without this a long-lived
+     * session accumulates every pushed message forever — a slow memory leak. The
+     * cost of the cap: a reconnect that was offline for more than this many
+     * pushes replays only the most recent ones, which is fine (the keepalive
+     * keeps streams alive, so reconnect gaps are small). */
+    private static readonly MAX_EVENTS = 256;
+
     private makeEventId(streamId: StreamId): EventId {
         return `${streamId}::${this.seq++}`;
     }
@@ -31,6 +38,9 @@ export class InMemoryEventStore implements EventStore {
         await Promise.resolve();
         const eventId = this.makeEventId(streamId);
         this.events.push({ eventId, streamId, message });
+        if (this.events.length > InMemoryEventStore.MAX_EVENTS) {
+            this.events.splice(0, this.events.length - InMemoryEventStore.MAX_EVENTS);
+        }
         return eventId;
     }
 

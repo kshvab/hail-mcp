@@ -12,6 +12,11 @@ const MAX_ENTRIES = 500;
  * In-RAM FIFO audit of delivered messages (preview only). Bounded ring buffer —
  * no database: presence is already in-RAM and a restart drops every connection,
  * so durable audit would outlive its sessions for no benefit.
+ *
+ * RESERVED: `log()` is written on every send; `recent()`/`size()` are the read
+ * path for a future admin/debug audit tool (not yet surfaced over the wire in
+ * v1 — see SECURITY.md). It is the substrate, kept intentionally, not an
+ * oversight.
  */
 export class PingLog {
     private readonly entries: PingLogEntry[] = [];

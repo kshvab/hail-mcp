@@ -51,4 +51,18 @@ describe("InMemoryEventStore", () => {
         expect(streamId).toBe("");
         expect(sent).toEqual([]);
     });
+
+    it("bounds the buffer (does not grow without limit)", async () => {
+        const store = new InMemoryEventStore();
+        for (let i = 0; i < 1000; i++) await store.storeEvent("s", msg(i));
+        // Replaying from the very first id finds at most the retained window —
+        // the oldest events were evicted rather than kept forever.
+        const sent: string[] = [];
+        await store.replayEventsAfter("s::0", {
+            send: async (id) => {
+                sent.push(id);
+            },
+        });
+        expect(sent.length).toBeLessThanOrEqual(256);
+    });
 });
