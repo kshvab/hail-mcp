@@ -160,10 +160,23 @@ async function routeBySession(req: IncomingMessage, res: ServerResponse): Promis
 // ─── shared-key gate (constant-time) ────────────────────────────────────────
 // isApiKeyValid (handlers.ts) SHA-256s both sides to a fixed 32 bytes before
 // comparing, so the comparison is constant-time with respect to length too.
+//
+// Primary path: the X-Api-Key header. Fallback: a ?key= URL query param, for
+// clients that cannot send a custom header (e.g. the Claude Desktop "custom
+// connector" UI, which offers only a URL). The query key lands in server/proxy
+// logs — see SECURITY.md; prefer the header where the client allows it.
 function authorized(req: IncomingMessage): boolean {
     const raw = req.headers[API_KEY_HEADER];
-    const provided = Array.isArray(raw) ? raw[0] : raw;
-    return isApiKeyValid(provided, config.apiKey);
+    const headerKey = Array.isArray(raw) ? raw[0] : raw;
+    if (isApiKeyValid(headerKey, config.apiKey)) return true;
+    try {
+        const queryKey =
+            new URL(req.url ?? "/", `http://127.0.0.1:${config.port}`).searchParams.get("key") ??
+            undefined;
+        return isApiKeyValid(queryKey, config.apiKey);
+    } catch {
+        return false;
+    }
 }
 
 // ─── raw http server (harness framing — the part that wakes Claude Code) ─────

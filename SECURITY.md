@@ -27,6 +27,7 @@ Peers attach with `claude --dangerously-load-development-channels server:hail`. 
 
 ### 5. Transport posture
 - The `/mcp` surface is plain HTTP. **Do not expose it to an untrusted network without TLS in front** (a reverse proxy terminating HTTPS) — the API key and message content would otherwise travel in cleartext.
+- The API key is normally sent as the `X-Api-Key` header. For clients that can't set a header, the server also accepts it as a `?key=` query param — **convenient but weaker**: a key in the URL can be captured by server access logs, reverse-proxy/CDN logs, and browser/history. Use it only over HTTPS, prefer the header where the client allows it, and rotate the key if a URL containing it may have been logged where you don't control the logs.
 - State is in-RAM and per-connection; nothing is persisted to disk.
 - The in-RAM audit and `get_recent` inbox hold sender names and message content; `DEBUG=1` additionally logs a per-request trace including names and content previews. Don't run `DEBUG=1` where the logs are untrusted, and treat the host's memory/logs as containing message content.
 

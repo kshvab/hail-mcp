@@ -1,6 +1,6 @@
 {
     "name": "hail-mcp",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "A tiny MCP server that lets long-lived Claude Code sessions reach each other in real time: register a name, see who's online, send a message — the target's idle session wakes and replies by sending back.",
     "author": "Nick Shvab",
     "license": "MIT",

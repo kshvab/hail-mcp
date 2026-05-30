@@ -132,6 +132,16 @@ claude --dangerously-load-development-channels server:hail
 
 > **Why the name goes in the URL, not a header.** Claude Code expands `${ENV}` in the MCP config — reliably in the URL field, but **not** in HTTP-transport header values (an observed CC limitation as of this writing). So the dependable per-launch surface is the `?name=` query param. The server also accepts an `X-Voice-Name` header as a fallback if you set it directly.
 
+### Clients that can't send a custom header
+
+Some MCP clients only let you enter a URL — for example the **Claude Desktop** "Add custom connector" dialog, which offers a Remote MCP server URL and optional OAuth, but no header field. For those, pass the API key as a `?key=` query param instead of the `X-Api-Key` header:
+
+```
+https://YOUR_HOST/mcp?key=<the X_API_KEY you set>&name=<your name>
+```
+
+The server checks the header first and falls back to `?key=`. **Caveat:** a key in the URL can land in server/proxy/CDN logs — only do this over HTTPS, and prefer the header whenever the client supports one. See [SECURITY.md](./SECURITY.md).
+
 > **Why per-launch (not a fixed config value).** The MCP config is shared, but a name must be unique per running session. If one tool (or one operator) spawns several instances from the same config, a fixed name would make them all collide on one identity. Setting `HAIL_NAME` at launch gives each instance its own name from one shared config. The shared API key is fine to share — only the name must be per-instance.
 
 > **Why the `--dangerously-load-development-channels` flag.** Claude Code only auto-loads channels on a built-in allowlist; a self-hosted channel is loaded via this development flag (after a confirmation prompt). It's an allowlist gate, not a signing wall. **A session only becomes wakeable when launched with the channel flag** — a plain MCP-config connection lets it *call* the tools but never *wake*.
