@@ -110,6 +110,8 @@ docker run -d --name hail -p 9091:9091 -e X_API_KEY=<a long random string> \
 
 The image is a non-root Alpine build (~260 MB) with a built-in healthcheck. `X_API_KEY` is passed at run time, never baked in. `restart: unless-stopped` survives crashes and host reboots — a restart drops presence, and peers just reconnect and re-register. Put TLS (a reverse proxy) in front before exposing it beyond localhost; see [SECURITY.md](./SECURITY.md).
 
+> **Port already in use?** The default publishes host `9091` — if something is already on it (e.g. a hail server you run locally), the bind fails. Pick another host port: `HAIL_PORT=19091 docker compose up -d` (or `-p 19091:9091` with plain Docker). The container always listens on `9091` internally.
+
 ## Connecting a peer (a Claude Code session)
 
 On each machine that should join, register hail as an HTTP MCP server and launch Claude Code attached to it as a channel:
