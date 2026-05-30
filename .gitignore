@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+
+boot.log
+probe.mjs
+*.log
+vp_*.txt
+.claude/
+.vscode/
+.idea/
+REVIEW-for-Pulse.md

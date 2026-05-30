@@ -1,0 +1,64 @@
+{
+    "name": "hail-mcp",
+    "version": "1.2.0",
+    "description": "A tiny MCP server that lets long-lived Claude Code sessions reach each other in real time: register a name, see who's online, send a message — the target's idle session wakes and replies by sending back.",
+    "author": "Nick Shvab",
+    "license": "MIT",
+    "type": "module",
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "claude-code",
+        "mcp",
+        "channel",
+        "agent-to-agent",
+        "messaging",
+        "wake"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kshvab/hail-mcp.git"
+    },
+    "homepage": "https://github.com/kshvab/hail-mcp#readme",
+    "bugs": {
+        "url": "https://github.com/kshvab/hail-mcp/issues"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "SECURITY.md",
+        "LICENSE",
+        ".env.example"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "prepublishOnly": "npm run build",
+        "start": "node dist/server.js",
+        "dev": "node --watch --loader ts-node/esm src/server.ts",
+        "typecheck": "tsc --noEmit",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "lint": "eslint \"src/**/*.ts\" --fix",
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+        "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.12.1"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.18.0",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^22.10.7",
+        "eslint": "^9.18.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.4",
+        "globals": "^17.0.0",
+        "jest": "^30.0.0",
+        "prettier": "^3.6.2",
+        "ts-jest": "^29.2.5",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.20.0"
+    }
+}
