@@ -39,4 +39,4 @@ Peers attach with `claude --dangerously-load-development-channels server:hail`. 
 
 ## Reporting a vulnerability
 
-Please do **not** open a public issue for security problems. Use this repository's **"Report a vulnerability"** button (GitHub Private Vulnerability Reporting, under the Security tab) to open a private report with a description, impact, and reproduction steps. You can expect an acknowledgement within a few days, and we will coordinate a fix and disclosure timeline with you.
+Please do **not** open a public issue for security problems. Use this repository's **"Report a vulnerability"** button (GitHub Private Vulnerability Reporting, under the Security tab) to open a private report with a description, impact, and reproduction steps. If that is unavailable, contact the maintainer via the email on their GitHub profile (https://github.com/kshvab). You can expect an acknowledgement within a few days, and we will coordinate a fix and disclosure timeline with you.

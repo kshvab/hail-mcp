@@ -6,10 +6,14 @@ Thanks for your interest. hail is a small, focused MCP server; contributions tha
 
 ```bash
 npm install
-cp .env.example .env     # set a strong X_API_KEY
+cp .env.example .env     # set a strong X_API_KEY (PowerShell: Copy-Item .env.example .env)
 npm run build
 npm start                # node dist/server.js
 ```
+
+> Commands assume a POSIX shell; on Windows PowerShell substitute the equivalents (`Copy-Item` for `cp`, `$env:X_API_KEY="..."` for inline env vars).
+
+**Scope / non-goals.** hail stays a small, focused wake bridge — the four tools `register` / `who_is_online` / `send` / `get_recent`. Out of scope for v1: persistence, rooms / broadcast, and identity-bound keys (those land in v2). New tools need a clear reason and a JSON-schema input.
 
 - `npm run typecheck` — strict `tsc --noEmit` (keep it green; the strict config is intentional).
 - `npm test` — unit/smoke specs (jest, ESM).
