@@ -215,9 +215,24 @@ const httpServer = http.createServer((req, res) => {
                 // first would auto-flush a 200 and make the SDK's writeHead throw.
                 if (res.headersSent && !res.writableEnded) res.write(": keepalive\n\n");
             }, KEEPALIVE_MS);
-            res.on("close", () => {
+            // The GET SSE stream IS the wake channel. When it drops, this session
+            // can no longer be woken — so evict its presence the instant the stream
+            // ends, keyed by session id (a newer session that already took the name
+            // over is left untouched, since removeBySession only matches this sid).
+            // transport.onclose does NOT fire on a bare GET-stream death, so without
+            // this the registry keeps a dead wake handle: sends to the name push
+            // into a closed stream, server.notification doesn't throw, the message
+            // is reported delivered and silently lost. Evicting here makes those
+            // sends miss and fall through to the inbox (get_recent) instead.
+            const evict = (reason: string): void => {
                 clearInterval(keepalive);
-                log.debug(`GET stream closed (sid=${sid})`);
+                if (sid !== "-") presence.removeBySession(sid);
+                log.debug(`GET stream ${reason} (sid=${sid}) — wake presence evicted`);
+            };
+            res.on("close", () => evict("closed"));
+            res.on("error", (err: Error) => {
+                log.warn(`GET stream error (sid=${sid}): ${err.message}`);
+                evict("errored");
             });
             await routeBySession(req, res);
             return;

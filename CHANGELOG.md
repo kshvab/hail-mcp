@@ -5,6 +5,12 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-06-10
+
+### Fixed
+
+- **Sends to a peer whose wake-stream had silently dropped were marked `delivered` and lost.** The GET SSE stream is a peer's wake channel, but its closing did not evict the peer from the presence registry (`transport.onclose` does not fire on a bare GET-stream death). The registry kept a dead wake handle, so the next `send` pushed a `notifications/claude/channel` into a closed stream; `server.notification` did not throw, the message was reported `delivered: true`, and it reached neither the peer nor the inbox. The server now evicts a peer's presence the instant its GET SSE stream closes or errors (keyed by session id, so a newer session that has already taken the name over is left untouched). Such sends now miss and fall through to the inbox (`queued: true`), retrievable via `get_recent` — no silent loss. Operator note: the manual `/mcp reconnect` workaround is no longer required to recover a stalled receiver.
+
 ## [1.2.0] - 2026-05-30
 
 ### Added

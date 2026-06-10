@@ -151,6 +151,33 @@ describe("callTool — send", () => {
         expect(inbox[0]).toMatchObject({ from: "Alice", content: "hello" });
     });
 
+    it("falls through to the inbox after a peer's wake-stream evicts it (no silent loss)", async () => {
+        const deps = makeDeps();
+        const callTool = createCallTool(deps);
+        // Bob comes online (in production this also opens his GET SSE wake-stream).
+        await callTool(req("register"), fakeSession({ voiceName: "Bob", sessionId: "bob-s" }));
+        expect(deps.presence.has("Bob")).toBe(true);
+
+        // His wake-stream drops — v1.2.1 evicts his presence by session id the
+        // instant the GET stream closes. Before the fix this never happened:
+        // the registry kept a dead wake handle, the next send was pushed into a
+        // closed stream, server.notification didn't throw, and the message was
+        // reported delivered and silently lost.
+        deps.presence.removeBySession("bob-s");
+
+        const res = await callTool(
+            req("send", { to: "Bob", content: "still here?" }),
+            fakeSession({ voiceName: "Alice" }),
+        );
+
+        // Not lost: reported queued, and retrievable via get_recent.
+        expect(payload(res)).toEqual({ ok: true, delivered: false, queued: true });
+        const got = await callTool(req("get_recent"), fakeSession({ voiceName: "Bob" }));
+        const messages = payload(got).messages as Array<Record<string, unknown>>;
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toMatchObject({ from: "Alice", content: "still here?" });
+    });
+
     it("errors content_too_large past MAX_CONTENT", async () => {
         const deps = makeDeps();
         const callTool = createCallTool(deps);
