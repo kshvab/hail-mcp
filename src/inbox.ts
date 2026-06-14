@@ -5,8 +5,8 @@ export interface InboxMessage {
     at: Date;
 }
 
-/** Per-receiver ring capacity — newest in, oldest out. */
-const MAX_PER_NAME = 20;
+/** Per-receiver ring capacity — newest in, oldest out (held in RAM only). */
+const MAX_PER_NAME = 10;
 /** Cap on distinct inboxes — least-recently-active name is evicted past this. */
 const MAX_NAMES = 500;
 

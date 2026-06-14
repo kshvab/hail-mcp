@@ -17,13 +17,13 @@ describe("Inbox", () => {
         expect(got[0].at).toBeInstanceOf(Date);
     });
 
-    it("keeps only the last 20 per receiver (ring: newest in, oldest out)", () => {
+    it("keeps only the last 10 per receiver (ring: newest in, oldest out)", () => {
         const ix = new Inbox();
         for (let i = 0; i < 25; i++) ix.add("Alice", "Bob", `m${i}`);
         const got = ix.recent("Alice", 100);
-        expect(got).toHaveLength(20);
-        expect(got[0].content).toBe("m5"); // m0..m4 dropped
-        expect(got[19].content).toBe("m24");
+        expect(got).toHaveLength(10);
+        expect(got[0].content).toBe("m15"); // m0..m14 dropped
+        expect(got[9].content).toBe("m24");
     });
 
     it("recent(n) returns at most n, newest", () => {
