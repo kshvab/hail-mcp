@@ -124,7 +124,7 @@ describe("callTool — register", () => {
 });
 
 describe("callTool — send", () => {
-    it("delivers to an online peer and does NOT queue to the inbox", async () => {
+    it("delivers to an online peer AND always mirrors to the inbox (no-loss floor)", async () => {
         const deps = makeDeps();
         const callTool = createCallTool(deps);
         // Bring the target online so the push lands.
@@ -133,9 +133,15 @@ describe("callTool — send", () => {
         const sender = fakeSession({ voiceName: "Alice" });
         const res = await callTool(req("send", { to: "Bob", content: "hi" }), sender);
 
-        expect(payload(res)).toEqual({ ok: true, delivered: true, queued: false });
-        // A delivered send must not duplicate into the inbox.
-        expect(deps.inbox.recent("Bob", 10)).toEqual([]);
+        // delivered:true (the live push landed) but ALSO queued — we stop trusting
+        // the delivered flag, because a zombie stream (TCP half-open, no close
+        // event) reports delivered and silently loses the message. Every send is
+        // persisted; a live peer may then see a benign duplicate via get_recent,
+        // the correct trade against silent loss.
+        expect(payload(res)).toEqual({ ok: true, delivered: true, queued: true });
+        const inbox = deps.inbox.recent("Bob", 10);
+        expect(inbox).toHaveLength(1);
+        expect(inbox[0]).toMatchObject({ from: "Alice", content: "hi" });
     });
 
     it("queues to the inbox when the target is offline (delivered=false)", async () => {
@@ -263,12 +269,12 @@ describe("callTool — get_recent", () => {
         for (let i = 0; i < 60; i++) deps.inbox.add("Alice", "Bob", `m${i}`);
         const session = fakeSession({ voiceName: "Alice" });
 
-        // The inbox only retains 20 per name, so clamping is observed against that.
+        // The inbox only retains 10 per name, so clamping is observed against that.
         const def = await callTool(req("get_recent"), session);
         expect((payload(def).messages as unknown[]).length).toBe(10);
 
         const maxed = await callTool(req("get_recent", { n: 999 }), session);
-        expect((payload(maxed).messages as unknown[]).length).toBe(20);
+        expect((payload(maxed).messages as unknown[]).length).toBe(10);
 
         const nonFinite = await callTool(req("get_recent", { n: Number.NaN }), session);
         expect((payload(nonFinite).messages as unknown[]).length).toBe(10);

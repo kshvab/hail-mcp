@@ -40,7 +40,7 @@ export const TOOLS: ListToolsResult = {
         {
             name: "register",
             description:
-                "Come online as a named peer so others can reach you with send(). A session that connected WITH a name (via the ?name= URL / X-Voice-Name header) is already online and need not call this. A session that connected WITHOUT a name (e.g. a cold instance with no env var set) can pass `name` here to come online. If the name was already online (a prior session that dropped), this takes it over.",
+                "Come online as a named peer so others can reach you with send(). Call this ONLY if the user explicitly asks you to register, or if who_is_online does not already list you. In most launches you are ALREADY online under your given name without doing anything — and you may not realize it. If you are already listed, do NOT register a different name: that creates a SECOND, separate identity, and messages sent to your real name will not reach you. Only a session that came up with NO name at all needs to pass `name` here to appear. If your name was already online from a prior dropped session, this takes it over.",
             inputSchema: {
                 type: "object",
                 properties: {
@@ -194,12 +194,15 @@ export function createCallTool(deps: ToolDeps) {
             // buildWake owns the load-bearing fakechat-shaped meta (see its doc).
             const { wrapped, meta } = buildWake(from, content);
             const delivered = await push.push(cleanTo, wrapped, meta);
-            // Inbox only on a MISS: a live-woken peer already has the message, so
-            // get_recent never surfaces a duplicate; an offline/cloud peer pulls it
-            // later. queued reflects exactly that.
-            if (!delivered) inbox.add(cleanTo, from, content);
+            // ALWAYS inbox — the no-loss floor. A push can report delivered:true
+            // into a ZOMBIE stream (TCP half-open, no close/error event fires) and
+            // be silently lost, so we stop trusting the delivered flag and persist
+            // every message. A live-woken peer may then also see it via get_recent
+            // — a benign duplicate, the correct trade against silent loss. Held in
+            // RAM only (cleared on restart), capped to the inbox ring per name.
+            inbox.add(cleanTo, from, content);
             pingLog.log(from, cleanTo, content);
-            return ok({ ok: true, delivered, queued: !delivered });
+            return ok({ ok: true, delivered, queued: true });
         }
 
         if (name === "get_recent") {
